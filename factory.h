@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define MAX_PARTS 50
+#define MAX_PARTS 10
 #define MAX_THREADS 10
 #define LOG_MSG_SIZE 256
 #define PROD_SHM "/prod_log_shm"
@@ -50,7 +50,8 @@ typedef struct {
 extern volatile __sig_atomic_t isPaused;
 extern volatile __sig_atomic_t isShutDown;
 extern pthread_mutex_t pauseMutex;
-extern Part_Stack parts;
+extern Part_Stack produced_list;
+extern Part_Stack consumed_list;
 
 extern SharedLog *prod_log;
 extern SharedLog *cons_log;
@@ -60,8 +61,11 @@ extern sem_t *Cons_log_ready;
 extern sem_t *Cons_log_written;
 
 void *Prod(void *arg);
-void *Cons(void *arg);
+void *Cons();
 void *Manager();
+void AddProd();
+void AddCons();
+void MakeCar();
 void InitFactory();
 void CleanUpFactory();
 
