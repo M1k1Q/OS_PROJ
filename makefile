@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -I.
 LDFLAGS = -lpthread -lrt
 
-OBJS =  main.o producer.o consumer.o
+OBJS =  main.o producer.o consumer.o MakeCar.o
 DEPS = factory.h
 
 LOGGER_OBJS = Prodlogger.o conslogger.c
@@ -11,16 +11,20 @@ main : $(OBJS)
 	$(CC) -o main $(OBJS) $(LDFLAGS)
 
 prod_log : Prodlogger.c
-	$(CC) Prodlogger.c -o Prodlogger $(LDFLAGS)
+	$(CC) Prodlogger.c -o prodlog $(LDFLAGS)
 
 cons_log : conslogger.c
-	$(CC) conslogger.c -o conslogger $(LDFLAGS)
+	$(CC) conslogger.c -o conslog $(LDFLAGS)
+
+cm_log : CarMakeLogger.c
+	$(CC) CarMakeLogger.c -o Cmlog $(LDFLAGS)
+
 
 %.o : %.c $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf *.o main prod_log cons_log
+	rm -rf *.o main prodlog conslog Cmlog
 
 
 shmclean:
@@ -30,3 +34,7 @@ shmclean:
 	-@sem_unlink /cons_sem_log_ready
 	-@sem_unlink /cons_sem_log_written
 	-@shm_unlink /cons_log_shm
+	-@sem_unlink /CarMake_sem_log_ready
+	-@sem_unlink /CarMake_sem_log_written
+	-@shm_unlink /CarMake_log_shm
+	
