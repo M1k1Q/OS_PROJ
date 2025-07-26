@@ -20,14 +20,19 @@ volatile __sig_atomic_t isShutDown = 0;
 pthread_mutex_t pauseMutex;
 
 Part_Stack produced_list;
-Part_Stack consumed_list;
+Part_Stack Ext_list;
+Part_Stack Int_list;
+
 SharedLog *prod_log = NULL;
 SharedLog *cons_log = NULL;
+SharedLog *Cm_log = NULL;
+
 sem_t *Prod_log_ready = NULL;
 sem_t *Prod_log_written = NULL;
-
 sem_t *Cons_log_ready = NULL;
 sem_t *Cons_log_written = NULL;
+sem_t *Cm_log_ready = NULL;
+sem_t *Cm_log_written = NULL;
 
 void *Manager() {
   char cmd;
@@ -56,31 +61,35 @@ void *Manager() {
 
 void InitFactory() {
   produced_list.top = 0;
-  consumed_list.top = 0;
+  Ext_list.top = 0;
   pthread_mutex_init(&produced_list.mutex, NULL);
   sem_init(&produced_list.empty, 0, MAX_PARTS);
   sem_init(&produced_list.full, 0, 0);
-  pthread_mutex_init(&consumed_list.mutex, NULL);
-  sem_init(&consumed_list.empty, 0, MAX_PARTS);
-  sem_init(&consumed_list.full, 0, 0);
+  pthread_mutex_init(&Ext_list.mutex, NULL);
+  sem_init(&Ext_list.empty, 0, MAX_PARTS);
+  sem_init(&Ext_list.full, 0, 0);
+  pthread_mutex_init(&Int_list.mutex, NULL);
+  sem_init(&Int_list.empty, 0, MAX_PARTS);
+  sem_init(&Int_list.full, 0, 0);
   srand(time(NULL));
+
   pthread_mutex_init(&pauseMutex, NULL);
 
   int prod_fd = shm_open(PROD_SHM, O_CREAT | O_RDWR, 0666);
   if (prod_fd == -1) {
-    perror("shm_open failed");
+    perror("Producer : SHM_OPEN FAILED...\n");
     exit(1);
   }
 
   if (ftruncate(prod_fd, sizeof(SharedLog)) == -1) {
-    perror("ftruncate failed");
+    perror("Producer : : FTRUNCATE FAILED...\n");
     exit(1);
   }
 
   prod_log = mmap(NULL, sizeof(SharedLog), PROT_READ | PROT_WRITE, MAP_SHARED,
                   prod_fd, 0);
   if (prod_log == MAP_FAILED) {
-    perror("mmap failed");
+    perror("Producer : MMAP FAILED...\n");
     exit(1);
   }
 
@@ -88,25 +97,25 @@ void InitFactory() {
   Prod_log_written = sem_open(PROD_LOG_WRITTEN, O_CREAT, 0666, 1);
 
   if (Prod_log_ready == SEM_FAILED || Prod_log_written == SEM_FAILED) {
-    perror("sem_open failed");
+    perror("Producer : SEM_OPEN FAILED...\n");
     exit(1);
   }
 
   int cons_fd = shm_open(CONS_SHM, O_CREAT | O_RDWR, 0666);
   if (cons_fd == -1) {
-    perror("shm_open failed");
+    perror("Consumer : SHM_OPEN FAILED...\n");
     exit(1);
   }
 
   if (ftruncate(cons_fd, sizeof(SharedLog)) == -1) {
-    perror("ftruncate failed");
+    perror("Consumer : FTRUNCATE FAILED...\n");
     exit(1);
   }
 
   cons_log = mmap(NULL, sizeof(SharedLog), PROT_READ | PROT_WRITE, MAP_SHARED,
                   cons_fd, 0);
   if (cons_log == MAP_FAILED) {
-    perror("mmap failed");
+    perror("Consumer : MMAP FAILED...\n");
     exit(1);
   }
 
@@ -114,7 +123,33 @@ void InitFactory() {
   Cons_log_written = sem_open(CONS_LOG_WRITTEN, O_CREAT, 0666, 1);
 
   if (Cons_log_ready == SEM_FAILED || Cons_log_written == SEM_FAILED) {
-    perror("sem_open failed");
+    perror("Consumer : SEM_OPEN FAILED...\n");
+    exit(1);
+  }
+
+  int cm_fd = shm_open(CM_SHM, O_CREAT | O_RDWR, 0666);
+  if (cm_fd == -1) {
+    perror("Car Make : SHM_OPEN FAILED...\n");
+    exit(1);
+  }
+
+  if (ftruncate(cm_fd, sizeof(SharedLog)) == -1) {
+    perror("Car Make : FTRUNCATE FAILED\n");
+    exit(1);
+  }
+
+  Cm_log = mmap(NULL, sizeof(SharedLog), PROT_READ | PROT_WRITE, MAP_SHARED,
+                cm_fd, 0);
+  if (Cm_log == MAP_FAILED) {
+    perror("Car Make : MMAP FAILED...\n");
+    exit(1);
+  }
+
+  Cm_log_ready = sem_open(CM_LOG_READY, O_CREAT, 0666, 0);
+  Cm_log_written = sem_open(CM_LOG_WRITTEN, O_CREAT, 0666, 1);
+
+  if (Cm_log_ready == SEM_FAILED || Cm_log_written == SEM_FAILED) {
+    perror("Car Make : SEM_OPEN FAILED...\n");
     exit(1);
   }
 }
@@ -130,6 +165,9 @@ void CleanUpFactory() {
   sem_unlink(CONS_LOG_READY);
   sem_unlink(CONS_LOG_WRITTEN);
   shm_unlink(CONS_SHM);
+  sem_unlink(CM_LOG_READY);
+  sem_unlink(CM_LOG_WRITTEN);
+  shm_unlink(CM_SHM);
 }
 
 void AddCons() {}
