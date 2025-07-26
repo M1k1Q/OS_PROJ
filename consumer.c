@@ -1,6 +1,14 @@
+#include <fcntl.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "factory.h"
@@ -28,14 +36,26 @@ void *Cons() {
     pthread_mutex_unlock(&produced_list.mutex);
     sem_post(&produced_list.empty);
 
-    pthread_mutex_lock(&consumed_list.mutex);
-    if (consumed_list.top < MAX_PARTS) {
-      consumed_list.stacc[consumed_list.top++] = part;
-    } else {
-      printf("consumer list has been filled \n");
+    if (part.type == Exterior) {
+      pthread_mutex_lock(&Ext_list.mutex);
+      if (Ext_list.top < MAX_PARTS) {
+        Ext_list.stacc[Ext_list.top++] = part;
+      } else {
+        printf("Exterior list has been filled \n");
+      }
+      pthread_mutex_unlock(&Ext_list.mutex);
+      sem_post(&Ext_list.full);
+    } else if (part.type == Interior) {
+      pthread_mutex_lock(&Int_list.mutex);
+      if (Ext_list.top < MAX_PARTS) {
+        Int_list.stacc[Int_list.top++] = part;
+      } else {
+        printf("Interior list has been filled \n");
+      }
+      pthread_mutex_unlock(&Int_list.mutex);
+      sem_post(&Int_list.full);
     }
-    pthread_mutex_unlock(&consumed_list.mutex);
-    sem_post(&consumed_list.full);
+
     if (cons_log && Cons_log_ready && Cons_log_written) {
       sem_wait(Cons_log_written);
       snprintf(cons_log->message, LOG_MSG_SIZE,
@@ -44,7 +64,8 @@ void *Cons() {
       sem_post(Cons_log_ready);
     }
 
-    printf("Consumer stack top : %d\n", consumed_list.top);
+    printf("Exterior list stack top : %d | Interior list stack top : %d\n",
+           Ext_list.top, Int_list.top);
   }
 
   return NULL;
