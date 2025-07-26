@@ -15,35 +15,40 @@ void *Prod(void *arg) {
 
     if (paused == 1) {
       // sleep(1);
+      printf("Producer paused\n");
       continue;
     }
 
     int part_ID = rand() % 100;
     int part_t = rand() % 2;
-    sleep(1);
+    sleep(2);
     if (isShutDown) break;
 
-    if (sem_trywait(&parts.empty) != 0) {
+    if (consumed_list.top == MAX_PARTS) {
+      printf("consumer list full");
+    }
+
+    if (sem_trywait(&consumed_list.empty) != 0) {
       if (isShutDown) break;
       continue;
     }
 
-    pthread_mutex_lock(&parts.mutex);
-    if (parts.top >= MAX_PARTS) {
-      pthread_mutex_unlock(&parts.mutex);
-      sem_post(&parts.empty);
+    pthread_mutex_lock(&produced_list.mutex);
+    if (produced_list.top >= MAX_PARTS) {
+      pthread_mutex_unlock(&produced_list.mutex);
+      sem_post(&produced_list.empty);
       continue;
     }
     Car_Part part = {.id = part_ID, .type = part_t};
-    parts.stacc[parts.top++] = part;
-    printf("parts top = %d\n", parts.top);
-    pthread_mutex_unlock(&parts.mutex);
-    sem_post(&parts.full);
+    produced_list.stacc[produced_list.top++] = part;
+    // printf("produced_list top = %d\n", produced_list.top);
+    pthread_mutex_unlock(&produced_list.mutex);
+    sem_post(&produced_list.full);
 
     if (prod_log && Prod_log_ready && Prod_log_written) {
       sem_wait(Prod_log_written);
       snprintf(prod_log->message, LOG_MSG_SIZE,
-               "Producer %d: ID=%d,Type = % s\n ", dat->id, part.id,
+               "Producer %d: ID=%d,Type = %s\n ", dat->id, part.id,
                part.type == Interior ? "Interior" : "Exterior");
       sem_post(Prod_log_ready);
     }
