@@ -7,6 +7,9 @@
 #define MAX_PARTS 10
 #define MAX_THREADS 10
 #define LOG_MSG_SIZE 256
+#define CM_SHM "/CarMake_log_shm"
+#define CM_LOG_READY "/CarMake_sem_log_ready"
+#define CM_LOG_WRITTEN "/CarMake_sem_log_written"
 #define PROD_SHM "/prod_log_shm"
 #define PROD_LOG_READY "/prod_sem_log_ready"
 #define PROD_LOG_WRITTEN "/prod_sem_log_written"
@@ -51,14 +54,18 @@ extern volatile __sig_atomic_t isPaused;
 extern volatile __sig_atomic_t isShutDown;
 extern pthread_mutex_t pauseMutex;
 extern Part_Stack produced_list;
-extern Part_Stack consumed_list;
+extern Part_Stack Ext_list;
+extern Part_Stack Int_list;
 
 extern SharedLog *prod_log;
 extern SharedLog *cons_log;
+extern SharedLog *Cm_log;
 extern sem_t *Prod_log_ready;
 extern sem_t *Prod_log_written;
 extern sem_t *Cons_log_ready;
 extern sem_t *Cons_log_written;
+extern sem_t *Cm_log_ready;
+extern sem_t *Cm_log_written;
 
 void *Prod(void *arg);
 void *Cons();
