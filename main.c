@@ -19,7 +19,8 @@ volatile __sig_atomic_t isPaused = 0;
 volatile __sig_atomic_t isShutDown = 0;
 pthread_mutex_t pauseMutex;
 
-Part_Stack parts;
+Part_Stack produced_list;
+Part_Stack consumed_list;
 SharedLog *prod_log = NULL;
 SharedLog *cons_log = NULL;
 sem_t *Prod_log_ready = NULL;
@@ -54,10 +55,14 @@ void *Manager() {
 }
 
 void InitFactory() {
-  parts.top = 0;
-  pthread_mutex_init(&parts.mutex, NULL);
-  sem_init(&parts.empty, 0, MAX_PARTS);
-  sem_init(&parts.full, 0, 0);
+  produced_list.top = 0;
+  consumed_list.top = 0;
+  pthread_mutex_init(&produced_list.mutex, NULL);
+  sem_init(&produced_list.empty, 0, MAX_PARTS);
+  sem_init(&produced_list.full, 0, 0);
+  pthread_mutex_init(&consumed_list.mutex, NULL);
+  sem_init(&consumed_list.empty, 0, MAX_PARTS);
+  sem_init(&consumed_list.full, 0, 0);
   srand(time(NULL));
   pthread_mutex_init(&pauseMutex, NULL);
 
@@ -127,13 +132,18 @@ void CleanUpFactory() {
   shm_unlink(CONS_SHM);
 }
 
+void AddCons() {}
+
+void AddProd() {}
+
 int main() {
   pthread_t prodThread1, consThread1, prodThread2, consThread2, Manager_Thread;
+  /*Manager_Thread*/
   Thread_data producerData1 = {Exterior, 1};
   Thread_data producerData2 = {Interior, 2};
 
   InitFactory();
-  // pthread_create(&Manager_Thread, NULL, Manager, NULL);
+  pthread_create(&Manager_Thread, NULL, Manager, NULL);
   pthread_create(&prodThread1, NULL, Prod, &producerData1);
   pthread_create(&consThread1, NULL, Cons, NULL);
   pthread_create(&prodThread2, NULL, Prod, &producerData2);
@@ -143,7 +153,7 @@ int main() {
   pthread_join(prodThread2, NULL);
   pthread_join(consThread1, NULL);
   pthread_join(consThread2, NULL);
-  // pthread_join(Manager_Thread, NULL);
+  pthread_join(Manager_Thread, NULL);
 
   CleanUpFactory();
   return 0;
