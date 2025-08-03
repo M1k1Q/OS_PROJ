@@ -31,17 +31,15 @@ void *Prod(void *arg) {
     sleep(2);
     if (isShutDown) break;
 
-    // Select target list
     Part_Stack *target =
         (my_type == Interior) ? &produced_Int_list : &produced_Ext_list;
 
-    // Wait for space in target list
     if (sem_trywait(&target->empty) != 0) {
       if (isShutDown) break;
       continue;
     }
 
-    // Lock and push
+
     pthread_mutex_lock(&target->mutex);
     if (target->top >= MAX_PARTS) {
       pthread_mutex_unlock(&target->mutex);
@@ -56,7 +54,7 @@ void *Prod(void *arg) {
     //printf("Producer %d pushing part ID=%d Type=%s\n", dat->id, part.id,
           //  part.type == Interior ? "Interior" : "Exterior");
 
-    // Optional logger
+
     if (prod_log && Prod_log_ready && Prod_log_written) {
       sem_wait(Prod_log_written);
       snprintf(prod_log->message, LOG_MSG_SIZE, "Producer %d: ID=%d, Type=%s\n",
