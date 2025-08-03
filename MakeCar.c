@@ -19,7 +19,7 @@
 
 void *MakeCar() {
   while (!isShutDown) {
-    // Pause check
+    
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
@@ -30,18 +30,17 @@ void *MakeCar() {
       continue;
     }
 
-    // Try to get both full semaphores with shutdown checks
     if (isShutDown) break;
     if (sem_wait(&Ext_list.full) == -1) break;
     if (isShutDown) break;
     if (sem_wait(&Int_list.full) == -1) break;
     if (isShutDown) break;
 
-    // Lock both stacks
+
     pthread_mutex_lock(&Ext_list.mutex);
     pthread_mutex_lock(&Int_list.mutex);
 
-    // Make sure stacks aren't already empty due to race
+
     if (Int_list.top <= 0 || Ext_list.top <= 0) {
       pthread_mutex_unlock(&Int_list.mutex);
       pthread_mutex_unlock(&Ext_list.mutex);
