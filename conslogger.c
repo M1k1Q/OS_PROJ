@@ -15,7 +15,7 @@
 #define LOG_SHM "/cons_log_shm"
 
 int main() {
-  int shm_fd = shm_open(LOG_SHM, O_RDWR, 0666); 
+  int shm_fd = shm_open(LOG_SHM, O_RDWR, 0666);
   if (shm_fd == -1) {
     perror("shm_open failed");
     exit(EXIT_FAILURE);
@@ -36,7 +36,13 @@ int main() {
   }
 
   while (1) {
+    printf("Shutdown status : %d\n", log->shutdown);
     sem_wait(log_ready);
+    if (log->shutdown) {
+      printf("Exiting Cons logger\n");
+      sem_post(log_written);
+      break;
+    }
     printf("logger : %s\n", log->message);
     sem_post(log_written);
   }
