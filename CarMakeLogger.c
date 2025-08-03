@@ -36,7 +36,13 @@ int main() {
   }
 
   while (1) {
+    printf("Shutdown status : %d\n", log->shutdown);
     sem_wait(log_ready);
+    if (log->shutdown) {
+      printf("Exiting Car Make logger\n");
+      sem_post(log_written);
+      break;
+    }
     printf("logger : %s\n", log->message);
     sem_post(log_written);
   }
