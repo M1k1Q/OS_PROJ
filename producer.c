@@ -15,68 +15,55 @@
 
 void *Prod(void *arg) {
   Thread_data *dat = (Thread_data *)arg;
+  part_Type my_type = dat->type;
 
   while (!isShutDown) {
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
-
     if (paused) {
-      printf("Producer %d paused\n", dat->id);
+      // printf("Producer %d paused\n", dat->id);
       sleep(1);
       continue;
     }
 
     int part_ID = rand() % 100;
-    part_Type part_t = rand() % 2;
     sleep(2);
     if (isShutDown) break;
 
-    if (part_t == Interior) {
-      pthread_mutex_lock(&Int_list.mutex);
-      if (Int_list.top >= MAX_PARTS) {
-        pthread_mutex_unlock(&Int_list.mutex);
-        printf("Producer %d waiting: Interior list full\n", dat->id);
-        continue;
-      }
-      pthread_mutex_unlock(&Int_list.mutex);
-    } else {
-      pthread_mutex_lock(&Ext_list.mutex);
-      if (Ext_list.top >= MAX_PARTS) {
-        pthread_mutex_unlock(&Ext_list.mutex);
-        printf("Producer %d waiting: Exterior list full\n", dat->id);
-        continue;
-      }
-      pthread_mutex_unlock(&Ext_list.mutex);
-    }
+    // Select target list
+    Part_Stack *target =
+        (my_type == Interior) ? &produced_Int_list : &produced_Ext_list;
 
-    if (sem_trywait(&produced_list.empty) != 0) {
+    // Wait for space in target list
+    if (sem_trywait(&target->empty) != 0) {
       if (isShutDown) break;
       continue;
     }
 
-    pthread_mutex_lock(&produced_list.mutex);
-    if (produced_list.top >= MAX_PARTS) {
-      pthread_mutex_unlock(&produced_list.mutex);
-      sem_post(&produced_list.empty);
+    // Lock and push
+    pthread_mutex_lock(&target->mutex);
+    if (target->top >= MAX_PARTS) {
+      pthread_mutex_unlock(&target->mutex);
+      sem_post(&target->empty);
       continue;
     }
 
-    // === PRODUCE PART ===
-    Car_Part part = {.id = part_ID, .type = part_t};
-    produced_list.stacc[produced_list.top++] = part;
-    pthread_mutex_unlock(&produced_list.mutex);
-    sem_post(&produced_list.full);
+    Car_Part part = {.id = part_ID, .type = my_type};
+    target->stacc[target->top++] = part;
+    pthread_mutex_unlock(&target->mutex);
+    sem_post(&target->full);
+    //printf("Producer %d pushing part ID=%d Type=%s\n", dat->id, part.id,
+          //  part.type == Interior ? "Interior" : "Exterior");
 
-    // === LOGGING ===
+    // Optional logger
     if (prod_log && Prod_log_ready && Prod_log_written) {
       sem_wait(Prod_log_written);
       snprintf(prod_log->message, LOG_MSG_SIZE, "Producer %d: ID=%d, Type=%s\n",
-               dat->id, part.id,
-               part.type == Interior ? "Interior" : "Exterior");
+               dat->id, part.id, my_type == Interior ? "Interior" : "Exterior");
       sem_post(Prod_log_ready);
     }
   }
-
+  printf("Producer shutting down..\n");
   return NULL;
 }
