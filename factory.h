@@ -44,10 +44,11 @@ typedef struct {
 typedef struct {
   part_Type type;
   int id;
+  int is_consumer;
 } Thread_data;
-
 typedef struct {
   char message[LOG_MSG_SIZE];
+  int shutdown;
 } SharedLog;
 
 extern volatile __sig_atomic_t isPaused;
@@ -56,6 +57,8 @@ extern pthread_mutex_t pauseMutex;
 extern Part_Stack produced_list;
 extern Part_Stack Ext_list;
 extern Part_Stack Int_list;
+extern Part_Stack produced_Int_list;
+extern Part_Stack produced_Ext_list;
 
 extern SharedLog *prod_log;
 extern SharedLog *cons_log;
@@ -68,11 +71,11 @@ extern sem_t *Cm_log_ready;
 extern sem_t *Cm_log_written;
 
 void *Prod(void *arg);
-void *Cons();
+void *Cons(void *arg);
+void *MakeCar();
 void *Manager();
 void AddProd();
 void AddCons();
-void MakeCar();
 void InitFactory();
 void CleanUpFactory();
 
