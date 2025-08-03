@@ -19,9 +19,11 @@ volatile __sig_atomic_t isPaused = 0;
 volatile __sig_atomic_t isShutDown = 0;
 pthread_mutex_t pauseMutex;
 
-Part_Stack produced_list;
+// Part_Stack produced_list;
 Part_Stack Ext_list;
 Part_Stack Int_list;
+Part_Stack produced_Int_list;
+Part_Stack produced_Ext_list;
 
 SharedLog *prod_log = NULL;
 SharedLog *cons_log = NULL;
@@ -51,6 +53,12 @@ void *Manager() {
     } else if (cmd == 'q') {
       isShutDown = 1;
       printf("Shutting down\n");
+      sem_post(&Ext_list.full);
+      sem_post(&Int_list.full);
+      sem_post(&produced_Int_list.full);
+      sem_post(&produced_Ext_list.full);
+      sem_post(&Ext_list.empty);
+      sem_post(&Int_list.empty);
       pthread_mutex_unlock(&pauseMutex);
       break;
     }
@@ -60,11 +68,16 @@ void *Manager() {
 }
 
 void InitFactory() {
-  produced_list.top = 0;
+  produced_Ext_list.top = 0;
+  produced_Int_list.top = 0;
   Ext_list.top = 0;
-  pthread_mutex_init(&produced_list.mutex, NULL);
-  sem_init(&produced_list.empty, 0, MAX_PARTS);
-  sem_init(&produced_list.full, 0, 0);
+  Int_list.top = 0;
+  pthread_mutex_init(&produced_Ext_list.mutex, NULL);
+  sem_init(&produced_Ext_list.empty, 0, MAX_PARTS);
+  sem_init(&produced_Ext_list.full, 0, 0);
+  pthread_mutex_init(&produced_Int_list.mutex, NULL);
+  sem_init(&produced_Int_list.empty, 0, MAX_PARTS);
+  sem_init(&produced_Int_list.full, 0, 0);
   pthread_mutex_init(&Ext_list.mutex, NULL);
   sem_init(&Ext_list.empty, 0, MAX_PARTS);
   sem_init(&Ext_list.full, 0, 0);
@@ -175,22 +188,27 @@ void AddCons() {}
 void AddProd() {}
 
 int main() {
-  pthread_t prodThread1, consThread1, prodThread2, consThread2, Manager_Thread;
+  pthread_t prodthread1, prodthread2, consthread1, consthread2, Manager_Thread,
+      CarMakeThread;
   /*Manager_Thread*/
-  Thread_data producerData1 = {Exterior, 1};
-  Thread_data producerData2 = {Interior, 2};
+  Thread_data prod1 = {Interior, 1, 0};
+  Thread_data prod2 = {Exterior, 2, 0};
+  Thread_data cons1 = {Interior, 1, 1};
+  Thread_data cons2 = {Exterior, 2, 1};
 
   InitFactory();
+  pthread_create(&prodthread1, NULL, Prod, &prod1);
+  pthread_create(&prodthread2, NULL, Prod, &prod2);
+  pthread_create(&consthread1, NULL, Cons, &cons1);
+  pthread_create(&consthread2, NULL, Cons, &cons2);
+  pthread_create(&CarMakeThread, NULL, MakeCar, NULL);
   pthread_create(&Manager_Thread, NULL, Manager, NULL);
-  pthread_create(&prodThread1, NULL, Prod, &producerData1);
-  pthread_create(&consThread1, NULL, Cons, NULL);
-  pthread_create(&prodThread2, NULL, Prod, &producerData2);
-  pthread_create(&consThread2, NULL, Cons, NULL);
 
-  pthread_join(prodThread1, NULL);
-  pthread_join(prodThread2, NULL);
-  pthread_join(consThread1, NULL);
-  pthread_join(consThread2, NULL);
+  pthread_join(prodthread1, NULL);
+  pthread_join(prodthread2, NULL);
+  pthread_join(consthread1, NULL);
+  pthread_join(consthread2, NULL);
+  pthread_join(CarMakeThread, NULL);
   pthread_join(Manager_Thread, NULL);
 
   CleanUpFactory();
