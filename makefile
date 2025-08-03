@@ -10,13 +10,13 @@ LOGGER_OBJS = Prodlogger.o conslogger.c
 main : $(OBJS)
 	$(CC) -o main $(OBJS) $(LDFLAGS)
 
-prod_log : Prodlogger.c
+prod_log : Prodlogger.c	$(DEPS)
 	$(CC) Prodlogger.c -o prodlog $(LDFLAGS)
 
-cons_log : conslogger.c
+cons_log : conslogger.c	$(DEPS)
 	$(CC) conslogger.c -o conslog $(LDFLAGS)
 
-cm_log : CarMakeLogger.c
+cm_log : CarMakeLogger.c $(DEPS)
 	$(CC) CarMakeLogger.c -o Cmlog $(LDFLAGS)
 
 
