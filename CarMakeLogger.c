@@ -15,7 +15,7 @@
 #define LOG_SHM "/CarMake_log_shm"
 
 int main() {
-  int shm_fd = shm_open(LOG_SHM, O_RDWR, 0666);  // Changed to O_RDWR
+  int shm_fd = shm_open(LOG_SHM, O_RDWR, 0666);
   if (shm_fd == -1) {
     perror("shm_open failed");
     exit(EXIT_FAILURE);
