@@ -52,6 +52,9 @@ void *Manager() {
       printf("Resumed\n");
     } else if (cmd == 'q') {
       isShutDown = 1;
+      prod_log->shutdown = 1;
+      cons_log->shutdown = 1;
+      Cm_log->shutdown = 1;
       printf("Shutting down\n");
       sem_post(&Ext_list.full);
       sem_post(&Int_list.full);
@@ -59,6 +62,9 @@ void *Manager() {
       sem_post(&produced_Ext_list.full);
       sem_post(&Ext_list.empty);
       sem_post(&Int_list.empty);
+      sem_post(Prod_log_ready);
+      sem_post(Cons_log_ready);
+      sem_post(Cm_log_ready);
       pthread_mutex_unlock(&pauseMutex);
       break;
     }
@@ -172,6 +178,8 @@ void CleanUpFactory() {
   sem_close(Prod_log_written);
   sem_close(Cons_log_ready);
   sem_close(Cons_log_written);
+  sem_close(Cm_log_ready);
+  sem_close(Cm_log_written);
   sem_unlink(PROD_LOG_READY);
   sem_unlink(PROD_LOG_WRITTEN);
   shm_unlink(PROD_SHM);
