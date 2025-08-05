@@ -36,7 +36,7 @@ int main() {
   }
 
   while (1) {
-    printf("Shutdown status : %d\n", log->shutdown);
+    //printf("Shutdown status : %d\n", log->shutdown);
     sem_wait(log_ready);
     if (log->shutdown) {
       printf("Exiting Prod logger\n");
