@@ -36,7 +36,7 @@ int main() {
   }
 
   while (1) {
-    //printf("Shutdown status : %d\n", log->shutdown);
+    // printf("Shutdown status : %d\n", log->shutdown);
     sem_wait(log_ready);
     if (log->shutdown) {
       printf("Exiting Cons logger\n");
@@ -46,6 +46,6 @@ int main() {
     printf("logger : %s\n", log->message);
     sem_post(log_written);
   }
-
+  // final change
   return 0;
 }
