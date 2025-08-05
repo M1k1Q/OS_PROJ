@@ -70,12 +70,19 @@ extern sem_t *Cons_log_written;
 extern sem_t *Cm_log_ready;
 extern sem_t *Cm_log_written;
 
+extern pthread_t prod_threads[MAX_THREADS];
+extern pthread_t cons_threads[MAX_THREADS];
+extern Thread_data prod_data[MAX_THREADS];
+extern Thread_data cons_data[MAX_THREADS];
+extern int prod_count;
+extern int cons_count;
+
 void *Prod(void *arg);
 void *Cons(void *arg);
 void *MakeCar();
 void *Manager();
-void AddProd();
-void AddCons();
+void AddProd(part_Type type);
+void AddCons(part_Type type);
 void InitFactory();
 void CleanUpFactory();
 
