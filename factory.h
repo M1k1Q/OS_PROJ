@@ -54,6 +54,7 @@ typedef struct {
 extern volatile __sig_atomic_t isPaused;
 extern volatile __sig_atomic_t isShutDown;
 extern pthread_mutex_t pauseMutex;
+// extern pthread_mutex_t car_count_mutex;
 extern Part_Stack produced_list;
 extern Part_Stack Ext_list;
 extern Part_Stack Int_list;
@@ -76,7 +77,9 @@ extern Thread_data prod_data[MAX_THREADS];
 extern Thread_data cons_data[MAX_THREADS];
 extern int prod_count;
 extern int cons_count;
+extern int Cars_produced;
 
+void Monitor();
 void *Prod(void *arg);
 void *Cons(void *arg);
 void *MakeCar();
@@ -85,5 +88,5 @@ void AddProd(part_Type type);
 void AddCons(part_Type type);
 void InitFactory();
 void CleanUpFactory();
-
+// final change
 #endif
