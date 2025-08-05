@@ -21,6 +21,7 @@ void *Prod(void *arg) {
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
+    sleep(2);
     if (paused) {
       // printf("Producer %d paused\n", dat->id);
       sleep(1);
@@ -28,7 +29,6 @@ void *Prod(void *arg) {
     }
 
     int part_ID = rand() % 100;
-    sleep(2);
     if (isShutDown) break;
 
     Part_Stack *target =
@@ -38,7 +38,6 @@ void *Prod(void *arg) {
       if (isShutDown) break;
       continue;
     }
-
 
     pthread_mutex_lock(&target->mutex);
     if (target->top >= MAX_PARTS) {
@@ -51,9 +50,8 @@ void *Prod(void *arg) {
     target->stacc[target->top++] = part;
     pthread_mutex_unlock(&target->mutex);
     sem_post(&target->full);
-    //printf("Producer %d pushing part ID=%d Type=%s\n", dat->id, part.id,
-          //  part.type == Interior ? "Interior" : "Exterior");
-
+    // printf("Producer %d pushing part ID=%d Type=%s\n", dat->id, part.id,
+    //        part.type == Interior ? "Interior" : "Exterior");
 
     if (prod_log && Prod_log_ready && Prod_log_written) {
       sem_wait(Prod_log_written);
@@ -62,6 +60,6 @@ void *Prod(void *arg) {
       sem_post(Prod_log_ready);
     }
   }
-  printf("Producer shutting down..\n");
+  // printf("Producer shutting down..\n");
   return NULL;
 }
