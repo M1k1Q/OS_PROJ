@@ -18,7 +18,7 @@ int numparts = 0;
 volatile __sig_atomic_t isPaused = 0;
 volatile __sig_atomic_t isShutDown = 0;
 pthread_mutex_t pauseMutex;
-
+int Cars_produced;
 // Part_Stack produced_list;
 Part_Stack Ext_list;
 Part_Stack Int_list;
@@ -62,6 +62,7 @@ void *Manager() {
         isPaused = 1;
         system("clear");
         printf("Paused\n");
+        Monitor();
         break;
       case 'r':
         isPaused = 0;
@@ -91,7 +92,7 @@ void *Manager() {
         prod_log->shutdown = 1;
         cons_log->shutdown = 1;
         Cm_log->shutdown = 1;
-
+        Monitor();
         int total = prod_count + cons_count + 4;
         for (int i = 0; i < total; i++) {
           sem_post(&Ext_list.full);
@@ -113,6 +114,16 @@ void *Manager() {
   }
 
   return NULL;
+}
+void Monitor() {
+  printf("==============FACTORY PROGRESS==============\n");
+  printf("Cars Produced : %d\n", Cars_produced + 1);
+  printf("Producer Threads    : %d\n", prod_count);
+  printf("Consumer Threads    : %d\n", cons_count);
+  printf("Produced Interior Parts : %d\n", produced_Int_list.top);
+  printf("Produced Exterior Parts : %d\n", produced_Ext_list.top);
+  printf("Consumer Interior Stack  : %d\n", Int_list.top);
+  printf("Consumer Exterior Stack  : %d\n", Ext_list.top);
 }
 
 void InitFactory() {
@@ -265,25 +276,25 @@ int main() {
   pthread_t Manager_Thread, CarMakeThread;
 
   // Initial producer/consumer data
-  Thread_data prod1 = {Interior, 1, 0};
-  Thread_data prod2 = {Exterior, 2, 0};
-  Thread_data cons1 = {Interior, 1, 1};
-  Thread_data cons2 = {Exterior, 2, 1};
+  // Thread_data prod1 = {Interior, 1, 0};
+  // Thread_data prod2 = {Exterior, 2, 0};
+  // Thread_data cons1 = {Interior, 1, 1};
+  // Thread_data cons2 = {Exterior, 2, 1};
 
   InitFactory();
 
-  // Start initial producer and consumer threads
-  prod_data[0] = prod1;
-  prod_data[1] = prod2;
-  cons_data[0] = cons1;
-  cons_data[1] = cons2;
+  // // Start initial producer and consumer threads
+  // prod_data[0] = prod1;
+  // prod_data[1] = prod2;
+  // cons_data[0] = cons1;
+  // cons_data[1] = cons2;
 
-  pthread_create(&prod_threads[0], NULL, Prod, &prod_data[0]);
-  pthread_create(&prod_threads[1], NULL, Prod, &prod_data[1]);
-  pthread_create(&cons_threads[0], NULL, Cons, &cons_data[0]);
-  pthread_create(&cons_threads[1], NULL, Cons, &cons_data[1]);
-  prod_count = 2;
-  cons_count = 2;
+  // pthread_create(&prod_threads[0], NULL, Prod, &prod_data[0]);
+  // pthread_create(&prod_threads[1], NULL, Prod, &prod_data[1]);
+  // pthread_create(&cons_threads[0], NULL, Cons, &cons_data[0]);
+  // pthread_create(&cons_threads[1], NULL, Cons, &cons_data[1]);
+  // prod_count = 2;
+  // cons_count = 2;
 
   pthread_create(&CarMakeThread, NULL, MakeCar, NULL);
   pthread_create(&Manager_Thread, NULL, Manager, NULL);
