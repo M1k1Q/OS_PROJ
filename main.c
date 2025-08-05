@@ -36,40 +36,82 @@ sem_t *Cons_log_written = NULL;
 sem_t *Cm_log_ready = NULL;
 sem_t *Cm_log_written = NULL;
 
+pthread_t prod_threads[MAX_THREADS];
+pthread_t cons_threads[MAX_THREADS];
+Thread_data prod_data[MAX_THREADS];
+Thread_data cons_data[MAX_THREADS];
+int prod_count = 0;
+int cons_count = 0;
+
 void *Manager() {
   char cmd;
   while (1) {
-    printf("Enter command (p to pause , r to resume , q to quit): \n");
+    printf("Enter command:\n");
+    printf(
+        "p = pause | r = resume | i = add Interior Producer | e = add Exterior "
+        "Producer\n");
+    printf(
+        "I = add Interior Consumer | E = add Exterior Consumer | q = quit\n");
+    fflush(stdout);
     cmd = getchar();
     getchar();
 
     pthread_mutex_lock(&pauseMutex);
-    if (cmd == 'p') {
-      isPaused = 1;
-      printf("Paused\n");
-    } else if (cmd == 'r') {
-      isPaused = 0;
-      printf("Resumed\n");
-    } else if (cmd == 'q') {
-      isShutDown = 1;
-      prod_log->shutdown = 1;
-      cons_log->shutdown = 1;
-      Cm_log->shutdown = 1;
-      printf("Shutting down\n");
-      sem_post(&Ext_list.full);
-      sem_post(&Int_list.full);
-      sem_post(&produced_Int_list.full);
-      sem_post(&produced_Ext_list.full);
-      sem_post(&Ext_list.empty);
-      sem_post(&Int_list.empty);
-      sem_post(Prod_log_ready);
-      sem_post(Cons_log_ready);
-      sem_post(Cm_log_ready);
-      pthread_mutex_unlock(&pauseMutex);
-      break;
+    switch (cmd) {
+      case 'p':
+        isPaused = 1;
+        system("clear");
+        printf("Paused\n");
+        break;
+      case 'r':
+        isPaused = 0;
+        system("clear");
+        printf("Resumed\n");
+        break;
+      case 'i':
+        system("clear");
+        AddProd(Interior);
+        break;
+      case 'e':
+        system("clear");
+        AddProd(Exterior);
+        break;
+      case 'I':
+        system("clear");
+        AddCons(Interior);
+        break;
+      case 'E':
+        system("clear");
+        AddCons(Exterior);
+        break;
+      case 'q':
+        isShutDown = 1;
+        system("clear");
+        printf("Shutting down...\n");
+        prod_log->shutdown = 1;
+        cons_log->shutdown = 1;
+        Cm_log->shutdown = 1;
+
+        int total = prod_count + cons_count + 4;
+        for (int i = 0; i < total; i++) {
+          sem_post(&Ext_list.full);
+          sem_post(&Int_list.full);
+          sem_post(&produced_Int_list.full);
+          sem_post(&produced_Ext_list.full);
+          sem_post(&Ext_list.empty);
+          sem_post(&Int_list.empty);
+        }
+        sem_post(Prod_log_ready);
+        sem_post(Cons_log_ready);
+        sem_post(Cm_log_ready);
+        pthread_mutex_unlock(&pauseMutex);
+        return NULL;
+      default:
+        printf("Invalid command.\n");
     }
     pthread_mutex_unlock(&pauseMutex);
   }
+
   return NULL;
 }
 
@@ -191,31 +233,71 @@ void CleanUpFactory() {
   shm_unlink(CM_SHM);
 }
 
-void AddCons() {}
+void AddCons(part_Type type) {
+  if (cons_count >= MAX_THREADS) {
+    printf("Maximum producer threads\n");
+    return;
+  }
 
-void AddProd() {}
+  cons_data[cons_count] =
+      (Thread_data){.type = type, .id = cons_count + 1, .is_consumer = 0};
+  pthread_create(&cons_threads[cons_count], NULL, Cons, &cons_data[cons_count]);
+  printf("Thread created , ID : %d , Type : Consumer for %s parts\n",
+         cons_count + 1, type == Interior ? "Interior" : "Exterior");
+  cons_count++;
+}
+
+void AddProd(part_Type type) {
+  if (prod_count >= MAX_THREADS) {
+    printf("Maximum producer threads\n");
+    return;
+  }
+
+  prod_data[prod_count] =
+      (Thread_data){.type = type, .id = prod_count + 1, .is_consumer = 0};
+  pthread_create(&prod_threads[prod_count], NULL, Prod, &prod_data[prod_count]);
+  printf("Thread created , ID : %d , Type : Producer for %s parts\n",
+         prod_count + 1, type == Interior ? "Interior" : "Exterior");
+  prod_count++;
+}
 
 int main() {
-  pthread_t prodthread1, prodthread2, consthread1, consthread2, Manager_Thread,
-      CarMakeThread;
-  /*Manager_Thread*/
+  pthread_t Manager_Thread, CarMakeThread;
+
+  // Initial producer/consumer data
   Thread_data prod1 = {Interior, 1, 0};
   Thread_data prod2 = {Exterior, 2, 0};
   Thread_data cons1 = {Interior, 1, 1};
   Thread_data cons2 = {Exterior, 2, 1};
 
   InitFactory();
-  pthread_create(&prodthread1, NULL, Prod, &prod1);
-  pthread_create(&prodthread2, NULL, Prod, &prod2);
-  pthread_create(&consthread1, NULL, Cons, &cons1);
-  pthread_create(&consthread2, NULL, Cons, &cons2);
+
+  // Start initial producer and consumer threads
+  prod_data[0] = prod1;
+  prod_data[1] = prod2;
+  cons_data[0] = cons1;
+  cons_data[1] = cons2;
+
+  pthread_create(&prod_threads[0], NULL, Prod, &prod_data[0]);
+  pthread_create(&prod_threads[1], NULL, Prod, &prod_data[1]);
+  pthread_create(&cons_threads[0], NULL, Cons, &cons_data[0]);
+  pthread_create(&cons_threads[1], NULL, Cons, &cons_data[1]);
+  prod_count = 2;
+  cons_count = 2;
+
   pthread_create(&CarMakeThread, NULL, MakeCar, NULL);
   pthread_create(&Manager_Thread, NULL, Manager, NULL);
 
-  pthread_join(prodthread1, NULL);
-  pthread_join(prodthread2, NULL);
-  pthread_join(consthread1, NULL);
-  pthread_join(consthread2, NULL);
+  // Wait for all producer threads
+  for (int i = 0; i < prod_count; i++) {
+    pthread_join(prod_threads[i], NULL);
+  }
+
+  // Wait for all consumer threads
+  for (int i = 0; i < cons_count; i++) {
+    pthread_join(cons_threads[i], NULL);
+  }
+
   pthread_join(CarMakeThread, NULL);
   pthread_join(Manager_Thread, NULL);
 
