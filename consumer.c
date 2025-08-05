@@ -22,12 +22,12 @@ void *Cons(void *arg) {
   Part_Stack *target_stack = (target_type == Interior) ? &Int_list : &Ext_list;
 
   while (!isShutDown) {
-    sleep(1);
     // printf("cons running\n");
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
 
+    sleep(2);
     if (paused) {
       // printf("Consumer %d paused\n", dat->id);
       sleep(1);
@@ -70,6 +70,6 @@ void *Cons(void *arg) {
       sem_post(Cons_log_ready);
     }
   }
-  printf("Consumer shutting down...\n");
+  // printf("Consumer shutting down...\n");
   return NULL;
 }
