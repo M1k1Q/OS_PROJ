@@ -19,13 +19,12 @@
 
 void *MakeCar() {
   while (!isShutDown) {
-    
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
-
+    sleep(2);
     if (paused) {
-      printf("MakeCar paused\n");
+      // printf("MakeCar paused\n");
       sleep(1);
       continue;
     }
@@ -36,14 +35,14 @@ void *MakeCar() {
     if (sem_wait(&Int_list.full) == -1) break;
     if (isShutDown) break;
 
-
     pthread_mutex_lock(&Ext_list.mutex);
     pthread_mutex_lock(&Int_list.mutex);
-
 
     if (Int_list.top <= 0 || Ext_list.top <= 0) {
       pthread_mutex_unlock(&Int_list.mutex);
       pthread_mutex_unlock(&Ext_list.mutex);
+      sem_post(&Ext_list.empty);
+      sem_post(&Int_list.empty);
       continue;
     }
 
@@ -57,7 +56,7 @@ void *MakeCar() {
     sem_post(&Ext_list.empty);
 
     // printf("Interior Part : %d | Exterior Part : %d \n", Interior_part.id,
-    //  Exterior_part.id);
+    //        Exterior_part.id);
 
     if (Cm_log && Cm_log_ready && Cm_log_written) {
       sem_wait(Cm_log_written);
@@ -66,8 +65,9 @@ void *MakeCar() {
               Interior_part.id, Exterior_part.id);
       sem_post(Cm_log_ready);
     }
+    Cars_produced++;
   }
 
-  printf("MakeCar shutting down...\n");
+  // printf("MakeCar shutting down...\n");
   return NULL;
 }
