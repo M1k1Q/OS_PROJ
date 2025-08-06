@@ -45,6 +45,7 @@ int cons_count = 0;
 int isAuto = 0;
 
 void *Manager() {
+  int Manualflag = 0;
   while (1) {
     // Check for shutdown due to auto
     // if (isShutDown) {
@@ -68,6 +69,11 @@ void *Manager() {
     pthread_mutex_lock(&pauseMutex);
     switch (cmd) {
       case 'a':
+        if (Manualflag != 0) {
+          system("clear");
+          printf("manual mode active , cannot shift to automatic mode\n");
+          break;
+        }
         if (isAuto) {
           printf("automatic mode already active \n");
           break;
@@ -75,6 +81,7 @@ void *Manager() {
           Automatic();
         }
         break;
+
       case 'p':
         isPaused = 1;
         system("clear");
@@ -93,6 +100,7 @@ void *Manager() {
         } else {
           system("clear");
           AddProd(Interior);
+          Manualflag++;
         }
         break;
       case 'e':
@@ -102,6 +110,7 @@ void *Manager() {
         } else {
           system("clear");
           AddProd(Exterior);
+          Manualflag++;
         }
         break;
       case 'I':
@@ -111,6 +120,7 @@ void *Manager() {
         } else {
           system("clear");
           AddCons(Interior);
+          Manualflag++;
         }
         break;
       case 'E':
@@ -120,6 +130,7 @@ void *Manager() {
         } else {
           system("clear");
           AddCons(Exterior);
+          Manualflag++;
         }
         break;
       case 'q':
@@ -344,6 +355,7 @@ void AddProd(part_Type type) {
 int main() {
   pthread_t Manager_Thread, CarMakeThread;
   CleanUpFactory();
+
   InitFactory();
 
   pthread_create(&CarMakeThread, NULL, MakeCar, NULL);
@@ -355,12 +367,14 @@ int main() {
   // printf("make car thread joined\n");
   for (int i = 0; i < prod_count; i++) {
     pthread_join(prod_threads[i], NULL);
-    // printf("Prod thread %d : type %d , joined \n", i + 1, prod_data[i].type);
+    // printf("Prod thread %d : type %d , joined \n", i + 1,
+    // prod_data[i].type);
   }
 
   for (int i = 0; i < cons_count; i++) {
     pthread_join(cons_threads[i], NULL);
-    // printf("Cons thread %d : type %d , joined \n", i + 1, cons_data[i].type);
+    // printf("Cons thread %d : type %d , joined \n", i + 1,
+    // cons_data[i].type);
   }
 
   CleanUpFactory();
