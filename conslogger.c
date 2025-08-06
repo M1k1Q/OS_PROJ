@@ -46,6 +46,6 @@ int main() {
     printf("logger : %s\n", log->message);
     sem_post(log_written);
   }
-  // final change
   return 0;
 }
+// final change
