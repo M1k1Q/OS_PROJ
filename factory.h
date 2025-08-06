@@ -32,14 +32,14 @@ typedef struct {
   sem_t empty;
 } Part_Stack;
 
-typedef struct {
-  int total_Cars;
-  int totalProducedInterior;
-  int totalProducedExterior;
-  int totalConsumedInterior;
-  int totalConsumedExterior;
-  pthread_mutex_t statMutex;
-} Logger_Data;
+// typedef struct {
+//   int total_Cars;
+//   int totalProducedInterior;
+//   int totalProducedExterior;
+//   int totalConsumedInterior;
+//   int totalConsumedExterior;
+//   pthread_mutex_t statMutex;
+// } Logger_Data;
 
 typedef struct {
   part_Type type;
@@ -78,7 +78,9 @@ extern Thread_data cons_data[MAX_THREADS];
 extern int prod_count;
 extern int cons_count;
 extern int Cars_produced;
+extern int IsAuto;
 
+void Automatic();
 void Monitor();
 void *Prod(void *arg);
 void *Cons(void *arg);
@@ -89,4 +91,5 @@ void AddCons(part_Type type);
 void InitFactory();
 void CleanUpFactory();
 // final change
+
 #endif
