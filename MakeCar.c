@@ -47,6 +47,7 @@ void *MakeCar() {
 
     pthread_mutex_lock(&Ext_list.mutex);
     pthread_mutex_lock(&Int_list.mutex);
+    
     if (Int_list.top <= 0 || Ext_list.top <= 0) {
       pthread_mutex_unlock(&Int_list.mutex);
       pthread_mutex_unlock(&Ext_list.mutex);
@@ -73,7 +74,7 @@ void *MakeCar() {
     }
 
     Cars_produced++;
-    sleep(1);  // simulate processing delay
+    sleep(1); 
   }
 
   printf("[MakeCar] Shutting down gracefully...\n");
