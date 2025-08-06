@@ -38,17 +38,15 @@ void *MakeCar() {
 
     if (sem_trywait(&Int_list.full) == -1) {
       if (isShutDown) {
-        sem_post(&Ext_list.full);  // return the exterior part back
+        sem_post(&Ext_list.full);  
         break;
       }
-      sem_post(&Ext_list.full);  // return the exterior part back
+      sem_post(&Ext_list.full);  
       continue;
     }
 
     pthread_mutex_lock(&Ext_list.mutex);
     pthread_mutex_lock(&Int_list.mutex);
-
-    // Re-check stack tops inside lock
     if (Int_list.top <= 0 || Ext_list.top <= 0) {
       pthread_mutex_unlock(&Int_list.mutex);
       pthread_mutex_unlock(&Ext_list.mutex);
