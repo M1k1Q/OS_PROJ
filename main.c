@@ -42,22 +42,39 @@ Thread_data prod_data[MAX_THREADS];
 Thread_data cons_data[MAX_THREADS];
 int prod_count = 0;
 int cons_count = 0;
+int isAuto = 0;
 
 void *Manager() {
-  char cmd;
   while (1) {
+    // Check for shutdown due to auto
+    // if (isShutDown) {
+    //   printf("[Manager] Detected shutdown signal, exiting manager
+    //   loop...\n"); break;
+    // }
+
     printf("Enter command:\n");
     printf(
-        "p = pause | r = resume | i = add Interior Producer | e = add Exterior "
+        "a = Automatic Production |p = pause | r = resume | i = add Interior "
+        "Producer | e = add Exterior "
         "Producer\n");
     printf(
         "I = add Interior Consumer | E = add Exterior Consumer | q = quit\n");
     fflush(stdout);
-    cmd = getchar();
-    getchar();
+
+    char cmd_buf[4];  // Enough space for input + newline + null terminator
+    if (!fgets(cmd_buf, sizeof(cmd_buf), stdin)) continue;
+    char cmd = cmd_buf[0];  // consume newline
 
     pthread_mutex_lock(&pauseMutex);
     switch (cmd) {
+      case 'a':
+        if (isAuto) {
+          printf("automatic mode already active \n");
+          break;
+        } else {
+          Automatic();
+        }
+        break;
       case 'p':
         isPaused = 1;
         system("clear");
@@ -70,28 +87,50 @@ void *Manager() {
         printf("Resumed\n");
         break;
       case 'i':
-        system("clear");
-        AddProd(Interior);
+        if (isAuto) {
+          system("clear");
+          printf("Function Add interior Prod disabled\n");
+        } else {
+          system("clear");
+          AddProd(Interior);
+        }
         break;
       case 'e':
-        system("clear");
-        AddProd(Exterior);
+        if (isAuto) {
+          system("clear");
+          printf("Function Add Exterior Prod disabled\n");
+        } else {
+          system("clear");
+          AddProd(Exterior);
+        }
         break;
       case 'I':
-        system("clear");
-        AddCons(Interior);
+        if (isAuto) {
+          system("clear");
+          printf("Function Add interior Cons disabled\n");
+        } else {
+          system("clear");
+          AddCons(Interior);
+        }
         break;
       case 'E':
-        system("clear");
-        AddCons(Exterior);
+        if (isAuto) {
+          system("clear");
+          printf("Function Add Exterior Cons disabled\n");
+        } else {
+          system("clear");
+          AddCons(Exterior);
+        }
         break;
       case 'q':
         isShutDown = 1;
         system("clear");
         printf("Shutting down...\n");
+
         prod_log->shutdown = 1;
         cons_log->shutdown = 1;
         Cm_log->shutdown = 1;
+
         Monitor();
         int total = prod_count + cons_count + 4;
         for (int i = 0; i < total; i++) {
@@ -107,23 +146,53 @@ void *Manager() {
         sem_post(Cm_log_ready);
         pthread_mutex_unlock(&pauseMutex);
         return NULL;
+
       default:
         printf("Invalid command.\n");
+        break;
     }
     pthread_mutex_unlock(&pauseMutex);
   }
 
   return NULL;
 }
+
 void Monitor() {
   printf("==============FACTORY PROGRESS==============\n");
-  printf("Cars Produced : %d\n", Cars_produced + 1);
+  printf("Cars Produced : %d\n", Cars_produced);
   printf("Producer Threads    : %d\n", prod_count);
   printf("Consumer Threads    : %d\n", cons_count);
   printf("Produced Interior Parts : %d\n", produced_Int_list.top);
   printf("Produced Exterior Parts : %d\n", produced_Ext_list.top);
   printf("Consumer Interior Stack  : %d\n", Int_list.top);
   printf("Consumer Exterior Stack  : %d\n", Ext_list.top);
+}
+
+void Automatic() {
+  int extProd, intProd, extCons, intCons;
+  isAuto = 1;
+
+  printf("Enter number of Interior producers : ");
+  scanf("%d", &intProd);
+  printf("Enter number of Exterior producers : ");
+  scanf("%d", &extProd);
+  printf("Enter number of Interior consumers : ");
+  scanf("%d", &intCons);
+  printf("Enter number of Exterior consumers : ");
+  scanf("%d", &extCons);
+
+  int ch;
+  while ((ch = getchar()) != '\n' && ch != EOF);
+
+  for (int i = 0; i < intProd; i++) AddProd(Interior);
+  for (int i = 0; i < extProd; i++) AddProd(Exterior);
+  for (int i = 0; i < intCons; i++) AddCons(Interior);
+  for (int i = 0; i < extCons; i++) AddCons(Exterior);
+
+  system("clear");
+  printf("Automatic mode initialized.\n");
+  printf("Manual thread addition is now disabled.\n");
+  printf("You may still use [p]ause, [r]esume, and [q]uit.\n");
 }
 
 void InitFactory() {
@@ -274,44 +343,29 @@ void AddProd(part_Type type) {
 
 int main() {
   pthread_t Manager_Thread, CarMakeThread;
-
-  // Initial producer/consumer data
-  // Thread_data prod1 = {Interior, 1, 0};
-  // Thread_data prod2 = {Exterior, 2, 0};
-  // Thread_data cons1 = {Interior, 1, 1};
-  // Thread_data cons2 = {Exterior, 2, 1};
-
+  CleanUpFactory();
   InitFactory();
-
-  // // Start initial producer and consumer threads
-  // prod_data[0] = prod1;
-  // prod_data[1] = prod2;
-  // cons_data[0] = cons1;
-  // cons_data[1] = cons2;
-
-  // pthread_create(&prod_threads[0], NULL, Prod, &prod_data[0]);
-  // pthread_create(&prod_threads[1], NULL, Prod, &prod_data[1]);
-  // pthread_create(&cons_threads[0], NULL, Cons, &cons_data[0]);
-  // pthread_create(&cons_threads[1], NULL, Cons, &cons_data[1]);
-  // prod_count = 2;
-  // cons_count = 2;
 
   pthread_create(&CarMakeThread, NULL, MakeCar, NULL);
   pthread_create(&Manager_Thread, NULL, Manager, NULL);
 
-  // Wait for all producer threads
+  pthread_join(Manager_Thread, NULL);
+  // printf("Manager thread joined\n");
+  pthread_join(CarMakeThread, NULL);
+  // printf("make car thread joined\n");
   for (int i = 0; i < prod_count; i++) {
     pthread_join(prod_threads[i], NULL);
+    // printf("Prod thread %d : type %d , joined \n", i + 1, prod_data[i].type);
   }
 
-  // Wait for all consumer threads
   for (int i = 0; i < cons_count; i++) {
     pthread_join(cons_threads[i], NULL);
+    // printf("Cons thread %d : type %d , joined \n", i + 1, cons_data[i].type);
   }
 
-  pthread_join(CarMakeThread, NULL);
-  pthread_join(Manager_Thread, NULL);
-
   CleanUpFactory();
+
+  printf("\n[Main] Factory shutdown complete.\n");
   return 0;
 }
+// final change
