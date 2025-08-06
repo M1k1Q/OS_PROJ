@@ -18,31 +18,42 @@
 #define LOG_SHM "/CarMake_log_shm"
 
 void *MakeCar() {
-  while (!isShutDown) {
+  while (1) {
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
+    int shutdown = isShutDown;
     pthread_mutex_unlock(&pauseMutex);
-    sleep(2);
+
+    if (shutdown) break;
+
     if (paused) {
-      // printf("MakeCar paused\n");
       sleep(1);
       continue;
     }
 
-    if (isShutDown) break;
-    if (sem_wait(&Ext_list.full) == -1) break;
-    if (isShutDown) break;
-    if (sem_wait(&Int_list.full) == -1) break;
-    if (isShutDown) break;
+    if (sem_trywait(&Ext_list.full) == -1) {
+      if (isShutDown) break;
+      continue;
+    }
+
+    if (sem_trywait(&Int_list.full) == -1) {
+      if (isShutDown) {
+        sem_post(&Ext_list.full);  // return the exterior part back
+        break;
+      }
+      sem_post(&Ext_list.full);  // return the exterior part back
+      continue;
+    }
 
     pthread_mutex_lock(&Ext_list.mutex);
     pthread_mutex_lock(&Int_list.mutex);
 
+    // Re-check stack tops inside lock
     if (Int_list.top <= 0 || Ext_list.top <= 0) {
       pthread_mutex_unlock(&Int_list.mutex);
       pthread_mutex_unlock(&Ext_list.mutex);
-      sem_post(&Ext_list.empty);
       sem_post(&Int_list.empty);
+      sem_post(&Ext_list.empty);
       continue;
     }
 
@@ -55,19 +66,19 @@ void *MakeCar() {
     sem_post(&Int_list.empty);
     sem_post(&Ext_list.empty);
 
-    // printf("Interior Part : %d | Exterior Part : %d \n", Interior_part.id,
-    //        Exterior_part.id);
-
     if (Cm_log && Cm_log_ready && Cm_log_written) {
       sem_wait(Cm_log_written);
       sprintf(Cm_log->message,
-              "Car produced : Interior ID = %d | Exterior ID = %d \n",
+              "Car produced : Interior ID = %d | Exterior ID = %d\n",
               Interior_part.id, Exterior_part.id);
       sem_post(Cm_log_ready);
     }
+
     Cars_produced++;
+    sleep(1);  // simulate processing delay
   }
 
-  // printf("MakeCar shutting down...\n");
+  printf("[MakeCar] Shutting down gracefully...\n");
   return NULL;
 }
+// Final Change
