@@ -21,7 +21,7 @@ void *Prod(void *arg) {
     pthread_mutex_lock(&pauseMutex);
     int paused = isPaused;
     pthread_mutex_unlock(&pauseMutex);
-    sleep(2);
+    sleep(1);
     if (paused) {
       // printf("Producer %d paused\n", dat->id);
       sleep(1);
@@ -63,3 +63,4 @@ void *Prod(void *arg) {
   // printf("Producer shutting down..\n");
   return NULL;
 }
+// final change
