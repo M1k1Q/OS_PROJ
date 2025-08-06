@@ -80,16 +80,16 @@ extern int cons_count;
 extern int Cars_produced;
 extern int IsAuto;
 
-void Automatic();
-void Monitor();
-void *Prod(void *arg);
-void *Cons(void *arg);
-void *MakeCar();
-void *Manager();
-void AddProd(part_Type type);
-void AddCons(part_Type type);
-void InitFactory();
-void CleanUpFactory();
+void Automatic(); // in main
+void Monitor(); // in main
+void *Prod(void *arg); // in consumer.c
+void *Cons(void *arg); // in producer.c
+void *MakeCar(); // in MakeCar.c
+void *Manager(); //in main
+void AddProd(part_Type type); // in main
+void AddCons(part_Type type); // in main
+void InitFactory(); // in main
+void CleanUpFactory(); // in main
 // final change
 
 #endif
